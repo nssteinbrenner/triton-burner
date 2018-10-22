@@ -25,7 +25,7 @@ class Triton:
         self.lastburn = None
         self.burn = False
         self.erroroccur = False
-        self.burnurl = f'redacted'
+        self.burnurl = (f'redacted')
 
     def __str__(self):
         return f"""\n\tT{self.serial}\n
@@ -101,9 +101,9 @@ class Triton:
                         allWeather.append(str(p.string).lower())
 
         except Exception as e:
-            with open('weatherError', 'w') as f:
-                f.write((f'{today} {now} - Error grabbing weather '
-                         f'from weather.gov for T{self.serial}\n\t{e}\n'))
+            with open('weatherError', 'a+') as f:
+                f.write(f'{today} {now} - Error grabbing weather '
+                        f'from weather.gov for T{self.serial}\n\t{e}\n')
 
         try:
             with open('config', 'r') as config:
@@ -123,9 +123,9 @@ class Triton:
             allWeather.append(w['currently']['icon'])
 
         except Exception as e:
-            with open('weatherError', 'w') as f:
-                f.write((f'{today} {now} - Error grabbing weather '
-                         f'from darksky for T{self.serial}\n\t{e}\n'))
+            with open('weatherError', 'a+') as f:
+                f.write(f'{today} {now} - Error grabbing weather '
+                        f'from darksky for T{self.serial}\n\t{e}\n')
 
         try:
             with splinter.Browser('firefox', headless=True) as browser:
@@ -137,13 +137,13 @@ class Triton:
                 soup = BeautifulSoup(wunderground, 'html.parser')
                 for p in soup.find_all('p'):
                     if p.string is not None:
-                        if 'snow' in str(p.string.lower()):
+                        if 'Snow' in str(p.string.lower()):
                             allWeather.append(str(p.string).lower())
 
         except Exception as e:
-            with open('weatherError', 'w') as f:
-                f.write((f'{today} {now} - Error grabbing weather'
-                         f'from wunderground for T{self.serial}\n\t{e}\n'))
+            with open('weatherError', 'a+') as f:
+                f.write(f'{today} {now} - Error grabbing weather'
+                        f'from wunderground for T{self.serial}\n\t{e}\n')
 
         self.weather = ' '.join(allWeather)
 
@@ -183,6 +183,7 @@ class Triton:
                                            f'("id_selection").value = '
                                            f'"{value}"')
                     browser.find_by_value('Burn Heaters').first.click()
+
             except Exception as e:
                 with open('burnerror', 'a+') as f:
                     f.write(f'Failed to burn T{self.serial} at '
@@ -267,7 +268,7 @@ with open('config', 'r') as config:
             username = target[1]
 
 with splinter.Browser('firefox', headless=True) as browser:
-    url = 'redacted'
+    url = ('redacted')
     browser.visit(url)
     time.sleep(3)
     (browser.find_by_id('login-form').first
@@ -325,5 +326,13 @@ for i in tritonclasslist:
     i.setBurn()
     if i.getBurn() is True and i.getBurningStatus() is not True:
         i.setWeather()
+        with open('notburning', 'a') as f:
+            f.write(str(i))
         if 'snow' in i.getWeather():
+            with open('results', 'a') as f:
+                f.write(str(i))
+            i.activateBurn()
+        if 'sleet' in i.getWeather():
+            with open('results', 'a') as f:
+                f.write(str(i))
             i.activateBurn()
