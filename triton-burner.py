@@ -137,7 +137,7 @@ class Triton:
                 soup = BeautifulSoup(wunderground, 'html.parser')
                 for p in soup.find_all('p'):
                     if p.string is not None:
-                        if 'snow' in p.string.lower():
+                        if 'snow' in str(p.string.lower()):
                             allWeather.append(str(p.string).lower())
 
         except Exception as e:
