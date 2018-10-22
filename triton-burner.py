@@ -326,13 +326,5 @@ for i in tritonclasslist:
     i.setBurn()
     if i.getBurn() is True and i.getBurningStatus() is not True:
         i.setWeather()
-        with open('notburning', 'a') as f:
-            f.write(str(i))
         if 'snow' in i.getWeather():
-            with open('results', 'a') as f:
-                f.write(str(i))
-            i.activateBurn()
-        if 'sleet' in i.getWeather():
-            with open('results', 'a') as f:
-                f.write(str(i))
             i.activateBurn()
