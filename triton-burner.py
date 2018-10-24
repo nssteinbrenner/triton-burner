@@ -25,7 +25,7 @@ class Triton:
         self.lastburn = None
         self.burn = False
         self.erroroccur = False
-        self.burnurl = (f'redacted')
+        self.burnurl = f'redacted'
 
     def __str__(self):
         return f"""\n\tT{self.serial}\n
@@ -196,7 +196,7 @@ class Triton:
             log.write(f'Issued burn to T{self.serial} at {now}\n')
 
     def errorChecker(self):
-        if 'Error' in self.getBurningStatus:
+        if 'Error' in str(self.getBurningStatus()):
             return None
         if f'T{self.serial}' in burned:
             now = time.strftime("%H:%M", time.gmtime())
@@ -268,7 +268,7 @@ with open('config', 'r') as config:
             username = target[1]
 
 with splinter.Browser('firefox', headless=True) as browser:
-    url = ('redacted')
+    url = '{redacted}'
     browser.visit(url)
     time.sleep(3)
     (browser.find_by_id('login-form').first
