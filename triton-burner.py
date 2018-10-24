@@ -157,7 +157,7 @@ class Triton:
 
     def activateBurn(self):
         if self.errorChecker() is not None and self.errorChecker() <= 75:
-            print(f"Skipping. T{self.serial} was been burned "
+            print(f"Skipping. T{self.serial} has been burned "
                   f"{self.errorChecker()} minutes ago. Check for errors.")
             self.errorWriter()
         elif f'T{self.serial}' in errored:
