@@ -156,11 +156,12 @@ class Triton:
                         self.burn = True
 
     def activateBurn(self):
-        if self.errorChecker() is not None and self.errorChecker() <= 75 \
-                or f'T{self.serial}' in errored:
+        if self.errorChecker() is not None and self.errorChecker() <= 75:
             print(f"Skipping. T{self.serial} was been burned "
                   f"{self.errorChecker()} minutes ago. Check for errors.")
             self.errorWriter()
+        elif f'T{self.serial}' in errored:
+            print(f"Skipping. T{self.serial} is in error list.")
         else:
             self.logBurn()
             try:
@@ -208,7 +209,7 @@ class Triton:
         today = time.strftime("%Y-%m-%d", time.gmtime())
         now = time.strftime("%H:%M", time.gmtime())
         with open(f'error/{today}', 'a') as error:
-            error.write(f'Possible error found for T{self.serial} at {now}\n')
+            error.write(f'T{self.serial} - {now} - Possible error\n')
 
     def getBurn(self):
         return self.burn
@@ -268,7 +269,7 @@ with open('config', 'r') as config:
             username = target[1]
 
 with splinter.Browser('firefox', headless=True) as browser:
-    url = '{redacted}'
+    url = 'redacted'
     browser.visit(url)
     time.sleep(3)
     (browser.find_by_id('login-form').first
