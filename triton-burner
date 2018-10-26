@@ -261,13 +261,13 @@ class Triton:
         return self.serial
 
     def getWeather(self):
-        return f'{self.weather}'
+        return str(self.weather)
 
     def getDev(self):
         return self.devid
 
     def getCountry(self):
-        return self.country
+        return str(self.country)
 
 
 today = time.strftime("%Y-%m-%d", time.gmtime())
