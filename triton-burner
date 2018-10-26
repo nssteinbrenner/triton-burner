@@ -11,6 +11,12 @@ from bs4 import BeautifulSoup
 class Triton:
 
     def __init__(self, sn, dev):
+        """Initialize class variables.
+
+        sn: String representation of serial number of Triton
+        dev: String representation of device ID of Triton.
+        """
+
         self.serial = sn
         self.devid = dev
         self.battery = None
@@ -26,9 +32,12 @@ class Triton:
         self.burn = False
         self.erroroccur = False
         self.country = None
-        self.burnurl = f'redacted'
+        self.burnurl = 'redacted'
 
     def __str__(self):
+        """Returns neatly formatted text representation of Triton.
+        """
+
         return f"""\n\tT{self.serial}\n
             \tBattery: {self.battery}\n
             \tSNR: {self.snr}\n
@@ -44,26 +53,63 @@ class Triton:
             \tBurn URL: {self.burnurl}\n"""
 
     def setBattery(self, battery):
+        """Defines the Triton's battery voltage variable.
+
+        battery: Battery voltage. Must be able to convert to float.
+        """
+
         if '(None)' not in battery:
             self.battery = float(battery)
 
     def setSnr(self, snr):
+        """Defines the Triton's signal to noise ratio.
+
+        snr: Signal to noise ratio. Must be able to convert to float.
+        """
+
         if '(None)' not in snr:
             self.snr = float(snr)
 
     def setMirrortemp(self, mirrortemp):
+        """Defines the Triton's mirror temperature.
+
+        mirrortemp: Mirror temperature. Must be able to convert to float.
+        """
+
         if '(None)' not in mirrortemp:
             self.mirrortemp = float(mirrortemp)
 
     def setAmbtemp(self, ambtemp):
+        """Defines the Triton's ambient temperature.
+
+        ambtempt: Ambient temperature. Must be able to convert to float.
+        """
+
         if '(None)' not in ambtemp:
             self.ambtemp = float(ambtemp)
 
     def setWindvert(self, windvert):
+        """Defines the Triton's vertical wind speed.
+
+        windvert: Vertical wind speed. Must be able to convert to float.
+        """
+
         if '(None)' not in windvert:
             self.windvert = float(windvert)
 
     def setBurningStatus(self, burning):
+        """Checks to see if the Triton is currently in 'burning' state.
+
+        burning: String representation of current Triton state.
+
+        Always one of the following:
+
+        'Job Running'
+        'Job Complete'
+        'Pending'
+        'Error'
+        """
+
         if 'Running' in burning:
             self.burningstatus = True
         if 'Pending' in burning:
@@ -72,20 +118,50 @@ class Triton:
             self.burningstatus = 'Error'
 
     def setLastBurn(self, lastburn):
+        """Defines the time the last burn was completed.
+
+        lastburn: Time in 24hr format.
+        """
+
         self.lastburn = lastburn
 
     def setLat(self, lat):
+        """Defines latitude of the Triton's location.
+
+        lat: Latitude, must be string.
+        """
+
         if 'None' not in lat:
             self.lat = lat
 
     def setLon(self, lon):
+        """Defines longitude of the Triton's location.
+
+        lon: Longitude, must be string.
+        """
+
         if 'None' not in lon:
             self.lon = lon
 
     def setDev(self, devid):
+        """Defines the device ID of the Triton.
+
+        devid: Device ID, can be int or str. Must be able to convert to str.
+        """
+
         self.devid = str(devid)
 
     def setWeather(self):
+        """Defines the Triton's weather variable.
+
+        Checks three different weather sources, and appends
+        them to a list. At the end, it joins them all into
+        a space separated string.
+
+        All errors are timestamped and written to a file in the
+        directory of the script called 'weatherError'.
+        """
+
         allWeather = []
 
         try:
@@ -155,6 +231,9 @@ class Triton:
         self.weather = ' '.join(allWeather)
 
     def setBurn(self):
+        """Checks to see if the Triton should be burned or not.
+        """
+
         if self.windvert is not None and self.battery is not None \
                 and self.ambtemp is not None:
             if self.windvert <= -0.5 and self.windvert >= -2.5:
@@ -163,6 +242,17 @@ class Triton:
                         self.burn = True
 
     def activateBurn(self):
+        """Runs the burn command on the Triton.
+
+        Checks to see if Triton has a potential error.
+        It does so by checking the duration of the last burn.
+
+        Burn command is issued through web browser automation
+        using Splinter. Checks to see if there are special scripts
+        for burning by running through values above the normal range.
+        If so, it runs the special script. Otherwise the default value is '2'.
+        """
+
         if f'T{self.serial}' in errored:
             print(f"Skipping. T{self.serial} is in error list.")
         elif self.errorChecker() is not None and self.errorChecker() <= 75:
@@ -200,12 +290,32 @@ class Triton:
                             f'{today} {now} GMT\n{str(self)}\n\t{e}\n')
 
     def logBurn(self):
+        """Writes to a log file when a burn command is issued.
+
+        Log file is in subdirectory of the script's directory.
+        File is always titled todays date with the following format:
+
+        {year}-{month}-{day}
+
+        example: /home/user/triton-burner/log/2018-10-26
+        """
+
         today = time.strftime("%Y-%m-%d", time.gmtime())
         now = time.strftime("%H:%M", time.gmtime())
         with open(f'log/{today}', 'a+') as log:
             log.write(f'Issued burn to T{self.serial} at {now}\n')
 
     def setCountry(self):
+        """Checks to see what country the Triton is in based off lat/lon
+
+        Defines country variable of the Triton with the two letter
+        abbreviation of the country.
+
+        example: 'US'
+
+        Queries from Google's geocode api.
+        """
+
         if self.lat is None or self.lon is None:
             return None
 
@@ -237,6 +347,18 @@ class Triton:
                         f'from Google API for T{self.serial}\n\t{e}\n')
 
     def errorChecker(self):
+        """Returns the difference between now and the last completed burn.
+
+        Calculates difference between now and the last completed burn,
+        this is to check for errors. If a burn ran too short (e.g 15 min)
+        there may be a problem with that Triton.
+
+        However there are sometimes communications issues, where the only
+        resolution is to repeatedly issue the burn command. In this case,
+        it returns 'None', so that those Triton's are not caught by the
+        error checking, and a new burn command is issued.
+        """
+
         if 'Error' in str(self.getBurningStatus()):
             return None
         if f'T{self.serial}' in burned:
@@ -246,6 +368,16 @@ class Triton:
             return difference
 
     def errorWriter(self):
+        """Writes errors to a log file.
+
+        Error file is in a subdirectory of the script's directory.
+        File is always titled todays date in the following format:
+
+        {year}-{month}-{day}
+
+        example: /home/user/triton-burner/error/2018-10-26
+        """
+
         today = time.strftime("%Y-%m-%d", time.gmtime())
         now = time.strftime("%H:%M", time.gmtime())
         with open(f'error/{today}', 'a') as error:
@@ -271,12 +403,20 @@ class Triton:
 
 
 today = time.strftime("%Y-%m-%d", time.gmtime())
-now = time.strftime("%H:%M", time.gmtime())
 burned = {}
 errored = []
 
 
 def timediff(now, then):
+    """Calculates the difference in minutes between two points in time.
+
+    now: String represenation of time on a 24hr clock. e.g 13:56
+    then: String representation of time on a 24hr clock.
+
+    Converts the time to minutes and gets the difference between the two
+    points.
+    """
+
     now = now.split(':')
     then = then.split(':')
     nowmin = ((int(now[0]) * 60) + int(now[1]))
@@ -284,6 +424,7 @@ def timediff(now, then):
     return nowmin - thenmin
 
 
+# Checks the log file creates a list of Tritons that have been burned today.
 if os.path.exists(f'log/{today}'):
     with open(f'log/{today}', 'r') as log:
         lines = log.readlines()
@@ -292,6 +433,7 @@ if os.path.exists(f'log/{today}'):
                 line = line.strip().split(' ')
                 burned[line[3]] = line[5]
 
+# Checks the error file to create a list of Triton's that have errored today.
 if os.path.exists(f'error/{today}'):
     with open(f'error/{today}') as error:
         lines = error.readlines()
@@ -300,7 +442,7 @@ if os.path.exists(f'error/{today}'):
                 line = line.strip().split(' ')
                 errored.append(line[0])
 
-
+# Grabs credentials from a config file in the local directory.
 with open('config', 'r') as config:
     lines = config.readlines()
     for line in lines:
@@ -311,6 +453,7 @@ with open('config', 'r') as config:
             target = line.strip().split(' ')
             username = target[1]
 
+# Automates a web browser to pull the HTML of the Triton list
 with splinter.Browser('firefox', headless=True) as browser:
     url = 'redacted'
     browser.visit(url)
@@ -324,16 +467,22 @@ with splinter.Browser('firefox', headless=True) as browser:
     time.sleep(10)
     tritonwebpage = browser.html
 
+# Opens the HTML of the Triton list in BeautifulSoup for parsing.
 soup = BeautifulSoup(tritonwebpage, 'html.parser')
 
 index = 0
 tritonclasslist = []
 
+
+# Parses the HTML of the Triton list to pull required values.
+# Constructs a Triton Triton with those values.
+# Then puts all Tritons in a list in order of when they were created.
 for a in soup.find_all('a'):
     if 'changelist_filters' in a['href'] and 'Add heater' not in str(a.string):
         spliturl = str(a['href']).split('/')
         deviceid = spliturl[4]
         tritonsn = str(a.string)
+        # Dynamically creates Tritons bsed off of their serial number.
         exec(f'T{tritonsn} = Triton({tritonsn}, deviceid)')
         exec(f'tritonclasslist.append(T{tritonsn})')
     if 'forecast.weather.gov' in a['href'] or 'observations' in a['href']:
@@ -366,11 +515,16 @@ for td in soup.find_all('td'):
         tritonclasslist[index].setMirrortemp(mirrortemp)
         index += 1
 
+# Checks to if a Triton should be burned, then sends the burn command if so.
 for i in tritonclasslist:
     i.setBurn()
     if i.getBurn() is True and i.getBurningStatus() is not True:
         i.setWeather()
         i.setCountry()
         if 'snow' in i.getWeather() or 'sleet' in i.getWeather():
+            with open('results', 'a+') as f:
+                f.write(str(i))
             if 'US' in i.getCountry() or 'CA' in i.getCountry():
+                with open('sentburn', 'a+') as f:
+                    f.write(str(i))
                 i.activateBurn()
