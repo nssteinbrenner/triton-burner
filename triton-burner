@@ -522,9 +522,5 @@ for i in tritonclasslist:
         i.setWeather()
         i.setCountry()
         if 'snow' in i.getWeather() or 'sleet' in i.getWeather():
-            with open('results', 'a+') as f:
-                f.write(str(i))
             if 'US' in i.getCountry() or 'CA' in i.getCountry():
-                with open('sentburn', 'a+') as f:
-                    f.write(str(i))
                 i.activateBurn()
