@@ -25,8 +25,11 @@ class Triton:
         self.burningstatus = False
         self.lastburn = None
         self.burn = False
+        self.efoy = False
         self.erroroccur = False
         self.country = None
+        self.sunrise = None
+        self.sunset = None
         self.burnurl = (f'https://energy.vaisala.com/skyserve/'
                         f'heater_burn?device_ids={self.devid}')
 
@@ -43,7 +46,11 @@ class Triton:
             \tWeather: {self.weather}\n
             \tBurning: {self.burningstatus}\n
             \tLast Burn: {self.lastburn}\n
-            \tBurn URL: {self.burnurl}\n"""
+            \tBurn URL: {self.burnurl}\n
+            \tSunrise: {self.sunrise}\n
+            \tSunset: {self.sunset}\n
+            \tCurrent Time: {time.time()}\n
+            \tEfoy: {self.efoy}\n"""
 
     def setBattery(self, battery):
         if '(None)' not in battery:
@@ -87,6 +94,14 @@ class Triton:
     def setDev(self, devid):
         self.devid = str(devid)
 
+    def setEfoy(self, efoy):
+        if str(efoy) == 'True':
+            self.efoy = True
+        elif str(efoy) == 'False':
+            self.efoy = False
+        else:
+            self.efoy = False
+
     def setWeather(self):
         allWeather = []
 
@@ -100,13 +115,12 @@ class Triton:
                 (browser.find_by_xpath('/html/body/div[4]/div[1]/div'
                                        '[2]/div/div/div[2]/div[2]/div'
                                        '[1]/div/div/form/button')
-                    .first.click())
+                        .first.click())
                 accuweather = browser.html
 
                 soup = BeautifulSoup(accuweather, 'html.parser')
 
                 current = soup.find_all('span', 'cond')[0]
-                allWeather.append('accuweather ')
                 allWeather.append(str(current.string).lower())
 
         except Exception as e:
@@ -114,7 +128,7 @@ class Triton:
             now = time.strftime("%H:%M", time.gmtime())
             with open('weatherError', 'a+') as f:
                 f.write(f'{today} {now} - Error grabbing weather '
-                        f'from weather.gov for T{self.serial}\n\t{e}\n')
+                        f'from accuweather for T{self.serial}\n\t{e}\n')
 
         try:
             with splinter.Browser('firefox', headless=True) as browser:
@@ -140,7 +154,7 @@ class Triton:
             with open('config', 'r') as config:
                 lines = config.readlines()
                 for line in lines:
-                    if 'darksky:' in line:
+                    if 'api:' in line:
                         target = line.strip().split(' ')
                         api = target[1]
 
@@ -151,6 +165,10 @@ class Triton:
             weather.raise_for_status()
 
             w = weather.json()
+
+            self.sunrise = w['daily']['data'][0]['sunriseTime']
+            self.sunset = w['daily']['data'][0]['sunsetTime']
+
             allWeather.append(w['currently']['icon'])
 
         except Exception as e:
@@ -185,20 +203,24 @@ class Triton:
     def setBurn(self):
         if self.windvert is not None and self.battery is not None \
                 and self.ambtemp is not None:
-            if self.windvert <= -0.5 and self.windvert >= -2.5:
-                if self.battery >= 12:
-                    if self.ambtemp <= 4:
-                        self.burn = True
+                    if self.windvert <= -0.5:  # and self.windvert >= -2.5:
+                        if self.ambtemp <= 4:
+                            if self.efoy is True:
+                                self.burn = True
+                            elif self.battery >= 12:
+                                self.burn = True
+                            elif self.battery >= 11.8:
+                                if self.setDaytime():
+                                    self.burn = True
 
     def activateBurn(self):
         if f'T{self.serial}' in errored:
             print(f"Skipping. T{self.serial} is in error list.")
-        elif self.errorChecker() is not None and self.errorChecker() <= 75:
+        elif self.errorChecker() is not None and self.errorChecker() <= 0:
             print(f"Skipping. T{self.serial} has been burned "
                   f"{self.errorChecker()} minutes ago. Check for errors.")
             self.errorWriter()
         else:
-            self.logBurn()
             try:
                 with splinter.Browser('firefox', headless=True) as browser:
                     browser.visit(self.burnurl)
@@ -226,6 +248,79 @@ class Triton:
                 with open('burnerror', 'a+') as f:
                     f.write(f'Failed to burn T{self.serial} at '
                             f'{today} {now} GMT\n{str(self)}\n\t{e}\n')
+
+            self.logBurn()
+
+    def burnChecker(self):
+        lastburn = ('https://energy.vaisala.com/admin/skyserve/'
+                    f'heater/burn_output/{self.serial}#lastBurnRaw')
+        try:
+            with splinter.Browser('firefox', headless=True) as browser:
+                browser.visit(lastburn)
+                time.sleep(7)
+                (browser.find_by_id('login').first
+                        .find_by_name('username').fill(username))
+                (browser.find_by_id('login').first
+                        .find_by_name('password').fill(password))
+                (browser.find_by_id('login').first
+                        .find_by_value('Login').click())
+                time.sleep(7)
+                burnhtml = browser.html
+
+            with open('.burnhtml', 'w+') as f:
+                f.write(str(burnhtml))
+                f.seek(0)
+                lines = f.readlines()
+                for line in lines:
+                    if '    data =' in line:
+                        target = (str(line[10:-2]))
+
+        except Exception as e:
+            with open('burnJson', 'a+') as f:
+                f.write('{today} {now} - Error grabbing burn data'
+                        f'for T{self.serial}\n\t{e}\n')
+
+        try:
+
+            data = json.loads(target)
+
+            self.intemp = data["in_temp"]["0"]
+            self.pressure = data["pressure"]["0"]
+            self.outtemp = data["out_temp"]["0"]
+            self.vsol = data["v_solenoid"]["0"]
+
+            if len(self.outtemp) > 29:
+                if float(self.vsol[30]) < 10.5:
+                    with open('burnErrors', 'a+') as f:
+                        f.write(f'{today} {now} - T{self.serial} '
+                                'bad vsol\n')
+
+            if len(self.outtemp) > 29:
+                if float(self.outtemp[5]) <= 4:
+                    gas = float(self.outtemp[30]) - float(self.outtemp[5])
+                    if gas < 5:
+                        with open('burnErrors', 'a+') as f:
+                            f.write(f'{today} {now} - T{self.serial} '
+                                    'out of propane\n')
+
+            if len(self.outtemp) > 89:
+                if float(self.outtemp[5]) <= 4:
+                    slow = float(self.outtemp[90]) - float(self.outtemp[5])
+                    if slow < 15:
+                        with open('burnErrors', 'a+') as f:
+                            f.write(f'{today} {now} T{self.serial} '
+                                    'slow burner\n')
+
+            if len(self.outtemp) > 37:
+                if float(self.intemp[37]) > float(self.outtemp[37] + 5):
+                    with open(f'burnErrors', 'a+') as f:
+                            f.write(f'{today} {now} - T{self.serial} '
+                                    'clogged system\n')
+
+        except Exception as e:
+            with open('burnJson', 'a+') as f:
+                f.write(f'{today} {now} - T{self.serial} '
+                        f'error loading json\n\t{e}\n')
 
     def logBurn(self):
         today = time.strftime("%Y-%m-%d", time.gmtime())
@@ -264,6 +359,40 @@ class Triton:
                 f.write(f'{today} {now} - Error grabbing country '
                         f'from Google API for T{self.serial}\n\t{e}\n')
 
+    def setDaytime(self):
+        with open('config', 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if 'api:' in line:
+                    line = line.strip().split(' ')
+                    api = line[1]
+
+        try:
+            if self.sunrise is None or self.sunset is None:
+                url = (f'https://api.darksky.net/forecast/{api}/'
+                       f'{self.lat},{self.lon}')
+
+                weather = requests.get(url)
+                weather.raise_for_status()
+
+                w = weather.json()
+
+                self.sunrise = w['daily']['data'][0]['sunriseTime']
+                self.sunset = w['daily']['data'][0]['sunsetTime']
+                current = time.time()
+
+            else:
+                current = time.time()
+
+            if current >= self.sunrise and current <= self.sunset:
+                return True
+            else:
+                return False
+
+        except Exception as e:
+            with open('daytime', 'a+') as f:
+                f.write(f'{today} {now} - Error setting daytime\t\n{e}\n')
+
     def errorChecker(self):
         if 'Error' in str(self.getBurningStatus()):
             return None
@@ -278,72 +407,6 @@ class Triton:
         now = time.strftime("%H:%M", time.gmtime())
         with open(f'error/{today}', 'a') as error:
             error.write(f'T{self.serial} - {now} - Possible error\n')
-
-    def burnChecker(self):
-        lastburn = ('https://energy.vaisala.com/admin/skyserve/'
-                    f'heater/burn_output/{self.serial}#lastBurnRaw')
-        try:
-            with splinter.Browser('firefox', headless=True) as browser:
-                browser.visit(lastburn)
-                time.sleep(7)
-                (browser.find_by_id('login-form').first
-                        .find_by_name('username').fill(username))
-                (browser.find_by_id('login-form').first
-                        .find_by_name('password').fill(password))
-                (browser.find_by_id('login-form').first
-                        .find_by_value('Log in').click())
-                time.sleep(7)
-                burnhtml = browser.html
-
-            with open('.burnhtml', 'w+') as f:
-                f.write(str(burnhtml))
-                f.seek(0)
-                lines = f.readlines()
-                for line in lines:
-                    if '    data =' in line:
-                        target = (str(line[10:-2]))
-
-        except Exception as e:
-            with open('burnData', 'a+') as f:
-                f.write('{today} {now} - Error grabbing burn data'
-                        f'for T{self.serial}\n\t{e}\n')
-
-        try:
-
-            data = json.loads(target)
-
-            self.intemp = data["in_temp"]["0"]
-            self.pressure = data["pressure"]["0"]
-            self.outtemp = data["out_temp"]["0"]
-            self.vsol = data["v_solenoid"]["0"]
-
-            if len(self.outtemp) > 29:
-                if float(self.vsol[30]) < 10.5:
-                    with open('testing', 'a+') as f:
-                        f.write(f'T{self.serial} bad vsol\n')
-
-            if len(self.outtemp) > 29:
-                if float(self.outtemp[5]) <= 4:
-                    gas = float(self.outtemp[30]) - float(self.outtemp[5])
-                    if gas < 5:
-                        with open('testing', 'a+') as f:
-                            f.write(f'T{self.serial} out of propane\n')
-
-            if len(self.outtemp) > 89:
-                if float(self.outtemp[5]) <= 4:
-                    slow = float(self.outtemp[90]) - float(self.outtemp[5])
-                    if slow < 15:
-                        with open('testing', 'a+') as f:
-                            f.write(f'T{self.serial} slow burner\n')
-
-            if len(self.outtemp) > 37:
-                if float(self.intemp[37]) > float(self.outtemp[37] + 5):
-                    with open(f'testing', 'a+') as f:
-                            f.write(f'T{self.serial} clogged system\n')
-
-        except Exception as e:
-            with open('uhoh', 'a+') as f:
-                f.write(f'T{self.serial} - {e}\n')
 
     def getBurn(self):
         return self.burn
@@ -459,22 +522,22 @@ for td in soup.find_all('td'):
     if 'field-mirror_temp' in td['class']:
         mirrortemp = str(td.string)
         tritonclasslist[index].setMirrortemp(mirrortemp)
+    if 'field-has_efoy' in td['class']:
+        efoy = str(td.contents[0]['alt'])
+        tritonclasslist[index].setEfoy(efoy)
         index += 1
 
 for i in tritonclasslist:
-    if i.getBurningStatus() is True:
-        i.burnChecker()
-        with open('checked', 'a+') as f:
-            f.write(f'{now} - T{i.getSerial()} checked\n')
     i.setBurn()
-    if i.getBurn() is True:
+#    if i.getBurningStatus() is True:
+#        i.burnChecker()
+    if i.getBurn() is True and i.getBurningStatus() is not True:
         i.setWeather()
         i.setCountry()
-        with open('potato', 'a+') as f:
-            f.write(str(i))
-#    if i.getBurn() is True and i.getBurningStatus() is not True:
-#        i.setWeather()
-#        i.setCountry()
-#        if 'snow' in i.getWeather() or 'sleet' in i.getWeather():
-#            if 'US' in i.getCountry() or 'CA' in i.getCountry()
-#                print("You should burn me!")
+        with open("allresults", 'a+') as f:
+            f.write(f'{today} {now} - {str(i)}')
+        if 'snow' in i.getWeather() or 'sleet' in i.getWeather():
+            if 'US' in i.getCountry() or 'CA' in i.getCountry():
+                with open('sentburn', 'a+') as f:
+                    f.write(f'{today} {now} - {str(i)}')
+                i.activateBurn()
