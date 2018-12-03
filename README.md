@@ -3,17 +3,13 @@ Identifying information has been removed from this script. Strings containing 'r
 
 Config file format is as follows:
 
-[api]
+    [api]
+    darksky={apikey}
+    google={apikey}
 
-darksky={apikey}
-
-google={apikey}
-
-[login]
-
-username={username}
-
-password={password}
+    [login]
+    username={username}
+    password={password}
 
 The [api] and [login] lines are optional. They have no meaning to the config reading script.
 
