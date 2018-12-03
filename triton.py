@@ -220,7 +220,7 @@ class Triton:
                                  headers=headers)
                 r.raise_for_status()
 
-            self.self.logWriter('activateBurn()')
+            self.logWriter('activateBurn()')
 
         except Exception as e:
             self.logWriter('activateBurn()', errored=e)
