@@ -1,6 +1,11 @@
 # triton-burner
 Identifying information has been removed from this script. Strings containing 'redacted' indicate information that has been removed.
 
+triton.py - Definition of Triton class representation.
+tconfig.py - Reads and defines values from a config file (api keys, login info).
+tfunctions.py - Defines functions needed to build the Triton objects.
+tburner.py - Calls functions from tfunctions to build/burn the Triton objects.
+
 Config file format is as follows:
 
     [api]
