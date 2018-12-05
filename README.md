@@ -23,6 +23,8 @@ Config file format is as follows:
 
 The [api] and [login] lines are optional. They have no meaning to the config reading script.
 
+Changelog:
+
 12/3/2018 -
 
     - Rewritten to use HTTP POST/GET requests. Web browser automation is slow and cumbersome comparatively.
