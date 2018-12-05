@@ -6,7 +6,7 @@ Written on Python 3.7.1
 Purpose of each file:
 
     triton.py - Definition of Triton class representation.
-    tconfig.py - Reads and defines values from a config file (api keys, login info).
+    tconfig.py - Reads and defines values from a seperate file called 'config' in the local directory (api keys, login info).
     tfunctions.py - Defines functions needed to build the Triton objects.
     tburner.py - Calls functions from tfunctions.py to build/burn the Triton objects.
     requirements.txt - Required Python modules to run the script.
