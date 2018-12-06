@@ -1,6 +1,4 @@
 # triton-burner
-Identifying information has been removed from this script. Strings containing 'redacted' indicate information that has been removed.
-
 Written on Python 3.7.1
 
 Purpose of each file:
@@ -24,6 +22,12 @@ Config file format is as follows:
 The [api] and [login] lines are optional. They have no meaning to the config reading script.
 
 Changelog:
+
+12/6/2018-
+
+    - Changed tburner.py so that it is able to be daemonized (previously ran using timer)
+    - Changed triton.py logWriter function to check for/create burned and log directories depending on if they exist.
+    - Minor syntax changes/removed redundant code
 
 12/3/2018 -
 
