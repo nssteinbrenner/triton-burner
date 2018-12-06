@@ -125,7 +125,6 @@ class Triton:
             self.logWriter('setWeather(weathergov)', errored=e)
 
         try:
-
             url = (f'https://api.darksky.net/forecast/{tconfig.darkapi}/'
                    f'{self.lat},{self.lon}')
 
@@ -141,6 +140,21 @@ class Triton:
 
         except Exception as e:
             self.logWriter('setWeather(darksky)', errored=e)
+
+        try:
+            url = (f'https://api.weather.com/v1/geocode/{self.lat}/'
+                   f'{self.lon}/observations/current.json?apiKey='
+                   '6532d6454b8aa370768e63d6ba5a832e&language=en-US&units=e')
+
+            weather = requests.get(url)
+            weather.raise_for_status()
+
+            w = weather.json()
+
+            allWeather.append(w["observation"]["phrase_32char"].lower())
+
+        except Exception as e:
+            self.logWriter('setWeather(wunderground)', errored=e)
 
         self.weather = ' '.join(allWeather)
 

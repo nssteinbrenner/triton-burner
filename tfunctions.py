@@ -19,15 +19,15 @@ def getBurnable(url):
         payload = {
                 'username': tconfig.energyuser,
                 'password': tconfig.energypass,
-                'next': '/admin/redacted/heater/?all=&burnable=0%2C3',
+                'next': '/admin/skyserve/heater/?all=&burnable=0%2C3',
                 'csrfmiddlewaretoken': csrf,
                 }
 
         headers = {
                 'user-agent': ('Mozilla/5.0 (X11; Linux x86_64;'
                                'rv:60.0) Gecko/20100101 Firefox/60.0'),
-                'referer': ('https://energy.redacted.com/admin/login/'
-                            '?next=/admin/redacted/heater/%3Fall%3D%'
+                'referer': ('https://energy.vaisala.com/admin/login/'
+                            '?next=/admin/skyserve/heater/%3Fall%3D%'
                             '26burnable%3D0%252C3'),
                 }
 
@@ -47,14 +47,14 @@ def tritonBuilder(burnablehtml):
             spliturl = str(a['href']).split('/')
             deviceid = spliturl[4]
             tritonsn = str(a.string)
-            exec(f'T{tritonsn} = Triton({tritonsn}, deviceid)')
+            exec(f'T{tritonsn} = Triton(tritonsn, deviceid)')
             exec(f'tritons.append(T{tritonsn})')
         if 'forecast.weather.gov' in a['href'] or 'observations' in a['href']:
             coords = str(a.string).strip().split(' ')
             coords[0] = coords[0][:-1]
             exec(f'T{tritonsn}.setLat(coords[0])')
             exec(f'T{tritonsn}.setLon(coords[1])')
-        if '/admin/redacted/heater/burn_output' in a['href']:
+        if '/admin/skyserve/heater/burn_output' in a['href']:
             burning = str(a.string).strip().split(' ')
             burnstatus = ' '.join(burning[0:2])
             lastburntime = ' '.join(burning[2:])
