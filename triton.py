@@ -2,6 +2,7 @@
 
 import time
 import requests
+import pathlib
 import tconfig
 
 from bs4 import BeautifulSoup
@@ -30,10 +31,10 @@ class Triton:
         self.country = None
         self.sunrise = None
         self.sunset = None
-        self.burnurl = ('https://energy.redacted.com/redeacted/'
+        self.burnurl = ('https://energy.vaisala.com/skyserve/'
                         f'heater_burn?device_ids={self.devid}')
-        self.loginburn = ('https://energy.redacted.com/account/login/'
-                          '?next=/redeacted/heater_burn%3Fdevice_ids'
+        self.loginburn = ('https://energy.vaisala.com/account/login/'
+                          '?next=/skyserve/heater_burn%3Fdevice_ids'
                           f'%3D{self.devid}')
 
     def __str__(self):
@@ -100,8 +101,6 @@ class Triton:
     def setEfoy(self, efoy):
         if str(efoy) == 'True':
             self.efoy = True
-        elif str(efoy) == 'False':
-            self.efoy = False
         else:
             self.efoy = False
 
@@ -148,9 +147,10 @@ class Triton:
     def setBurn(self):
         if self.donotburn is True:
             self.burn = False
-        elif (self.windvert is not None and self.battery is not None
+        elif (self.windvert is not None
+              and self.battery is not None
               and self.ambtemp is not None):
-                if self.windvert <= -0.5:  # and self.windvert >= -2.5:
+                if self.windvert <= -0.5:
                     if self.ambtemp <= 4:
                         if self.efoy is True:
                             self.burn = True
@@ -174,7 +174,7 @@ class Triton:
                 payload = {
                         'username': tconfig.energyuser,
                         'password': tconfig.energypass,
-                        'next': ('/redeacted/heater_burn?'
+                        'next': ('/skyserve/heater_burn?'
                                  f'device_ids={self.devid}'),
                         'csrfmiddlewaretoken': csrf,
                         }
@@ -182,8 +182,8 @@ class Triton:
                 headers = {
                         'user-agent': ('Mozilla/5.0 (X11; Linux x86_64;'
                                        'rv:60.0) Gecko/20100101 Firefox/60.0'),
-                        'referer': ('https://energy.redacted.com/account/login/'
-                                    '?next=/redeacted/heater_burn%3F'
+                        'referer': ('https://energy.vaisala.com/account/login/'
+                                    '?next=/skyserve/heater_burn%3F'
                                     f'device_ids%3D{self.devid}'),
                         }
 
@@ -273,15 +273,19 @@ class Triton:
             self.logWriter('setDaytime()', errored=e)
 
     def logWriter(self, func, errored=False):
+        requiredDirs = ['burned', 'log']
+        for directory in requiredDirs:
+            pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
+
         today = time.strftime("%Y-%m-%d", time.gmtime())
         now = time.strftime("%H:%M", time.gmtime())
         if errored is False:
             with open(f'burned/{today}', 'a+') as log:
-                log.write(f'{today} {now} - {func} - '
-                          f'Issued burn to T{self.serial}\n')
+                log.write(f'{today} {now} - {func } - '
+                          f'Issued burn to T{self.serial} at {now}\n')
         elif errored is not False:
             with open(f'log/{today}', 'a+') as error:
-                error.write(f'{today} {now} - {func} - Errored '
+                error.write(f'{today} {now} - {func} - Error '
                             f'at T{self.serial}\n\t{errored}\n')
 
     def getBurn(self):
