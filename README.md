@@ -27,13 +27,14 @@ Changelog:
 
     - Changed tburner.py so that it is able to be daemonized (previously ran using timer)
     - Changed triton.py logWriter function to check for/create burned and log directories depending on if they exist.
-    - Minor syntax changes/removed redundant code
+    - Added WUnderground as a weather source.
+    - Minor syntax changes/removed some redundant code
 
 12/3/2018 -
 
     - Rewritten to use HTTP POST/GET requests. Web browser automation is slow and cumbersome comparatively.
     - Rewrote logging, consolidated all errors into a single file, and all burns are in a separate file.
-    - Removed redundant parts of the script. For example, it previously checked 4 weather sources. Now checks the two most reliable.
+    - Removed some of the redundant parts of the script. Example: Triton.setWeather() function.
     - Separated files according to their utility. While not a very large project, this makes editing the file a lot easier.
     - Used lxml instead of html.parser with BeautifulSoup, lxml is a lot faster.
     - Added a "donotburn" file. Tritons listed in this file will not be burned.
